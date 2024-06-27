@@ -9,6 +9,7 @@ import (
 )
 
 // Структура для хранения информации о файлах
+
 type FileInfo struct {
 	Name string
 	Type string
@@ -32,23 +33,23 @@ func walk(root string) map[string]int64 {
 
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Printf("Error accessing path %q: %v\n", path, err)
+			fmt.Printf("Ошибка доступа%q: %v\n", path, err)
 			return err
 		}
 
 		if info.IsDir() {
-			fmt.Printf("Visited directory: %s\n", path)
+			fmt.Printf("Проход директории: %s\n", path)
 			var dirSize int64
 			err := filepath.Walk(path, func(subPath string, subInfo os.FileInfo, subErr error) error {
 				if subErr != nil {
-					fmt.Printf("Error accessing path %q: %v\n", subPath, subErr)
+					fmt.Printf("Оибка доступа  %q: %v\n", subPath, subErr)
 					return subErr
 				}
 				dirSize += subInfo.Size()
 				return nil
 			})
 			if err != nil {
-				fmt.Printf("Error calculating size for directory %q: %v\n", path, err)
+				fmt.Printf("ошибка размера каталога %q: %v\n", path, err)
 			}
 			directorySizes[path] = dirSize
 		}
@@ -57,19 +58,19 @@ func walk(root string) map[string]int64 {
 	})
 
 	if err != nil {
-		fmt.Printf("Error walking the path %q: %v\n", root, err)
+		fmt.Printf("Ошибка прохода%q: %v\n", root, err)
 	}
 
 	return directorySizes
 }
 func main() {
 	// Определение и парсинг флагов
-	rootPtr := flag.String("root", "", "Specify the root directory")
-	sortPtr := flag.String("sort", "asc", "Specify the sort order (asc or desc)")
+	rootPtr := flag.String("root", "", "Укажите корневую папку")
+	sortPtr := flag.String("sort", "asc", "Укажите порядок сортировки (asc или desc)")
 
 	flag.Usage = func() {
-		fmt.Println("  --root string\tSpecify the root directory")
-		fmt.Println("  --sort string\tSpecify the sort order (asc or desc)")
+		fmt.Println("  --root string\tУкажите корневую папку\"")
+		fmt.Println("  --sort string\tУкажите порядок сортировки (asc или desc)")
 	}
 
 	flag.Parse()
@@ -81,7 +82,7 @@ func main() {
 
 	// Проверка правильности ввода флагов
 	if *sortPtr != "asc" && *sortPtr != "desc" {
-		fmt.Println("Error: Invalid sort order. Please specify 'asc' or 'desc' for the --sort flag.")
+		fmt.Println("Ошибка: неверный порядок сортировки. Укажите asc или desc для флага --sort.")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -107,7 +108,6 @@ func main() {
 		if fileInfo.IsDir() {
 			fileType = "directory"
 		}
-
 		// Получение размера папки, если это директория
 		var fileSize int64
 		if fileInfo.IsDir() {
