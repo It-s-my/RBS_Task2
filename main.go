@@ -27,6 +27,41 @@ func sortBySizeDesc(files []FileInfo) {
 	})
 }
 
+func walk(root string) map[string]int64 {
+	directorySizes := make(map[string]int64)
+
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Printf("Error accessing path %q: %v\n", path, err)
+			return err
+		}
+
+		if info.IsDir() {
+			fmt.Printf("Visited directory: %s\n", path)
+			var dirSize int64
+			err := filepath.Walk(path, func(subPath string, subInfo os.FileInfo, subErr error) error {
+				if subErr != nil {
+					fmt.Printf("Error accessing path %q: %v\n", subPath, subErr)
+					return subErr
+				}
+				dirSize += subInfo.Size()
+				return nil
+			})
+			if err != nil {
+				fmt.Printf("Error calculating size for directory %q: %v\n", path, err)
+			}
+			directorySizes[path] = dirSize
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		fmt.Printf("Error walking the path %q: %v\n", root, err)
+	}
+
+	return directorySizes
+}
 func main() {
 	// Определение и парсинг флагов
 	rootPtr := flag.String("root", "", "Specify the root directory")
@@ -59,7 +94,7 @@ func main() {
 	}
 
 	fileInfos := make([]FileInfo, 0)
-
+	directories := walk(*rootPtr)
 	// Чтение информации о файлах
 	for _, file := range files {
 		fileInfo, err := os.Stat(file)
@@ -73,10 +108,18 @@ func main() {
 			fileType = "directory"
 		}
 
+		// Получение размера папки, если это директория
+		var fileSize int64
+		if fileInfo.IsDir() {
+			fileSize = directories[file]
+		} else {
+			fileSize = fileInfo.Size()
+		}
+
 		fileInfos = append(fileInfos, FileInfo{
 			Name: filepath.Base(file),
 			Type: fileType,
-			Size: fileInfo.Size(),
+			Size: fileSize,
 		})
 	}
 
@@ -92,4 +135,5 @@ func main() {
 		output := fmt.Sprintf("Name: %s, Type: %s, Size: %d bytes", fileInfo.Name, fileInfo.Type, fileInfo.Size)
 		fmt.Println(output)
 	}
+
 }
