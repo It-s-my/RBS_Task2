@@ -132,7 +132,19 @@ func main() {
 
 	// Вывод информации о файлах
 	for _, fileInfo := range fileInfos {
-		output := fmt.Sprintf("Name: %s, Type: %s, Size: %d bytes", fileInfo.Name, fileInfo.Type, fileInfo.Size)
+		var sizeStr string
+		switch {
+		case fileInfo.Size >= 1024*1024*1024:
+			sizeStr = fmt.Sprintf("%.2f GB", float64(fileInfo.Size)/(1024*1024*1024))
+		case fileInfo.Size >= 1024*1024:
+			sizeStr = fmt.Sprintf("%.2f MB", float64(fileInfo.Size)/(1024*1024))
+		case fileInfo.Size >= 1024:
+			sizeStr = fmt.Sprintf("%.2f KB", float64(fileInfo.Size)/1024)
+		default:
+			sizeStr = fmt.Sprintf("%d bytes", fileInfo.Size)
+		}
+
+		output := fmt.Sprintf("Name: %s, Type: %s, Size: %s", fileInfo.Name, fileInfo.Type, sizeStr)
 		fmt.Println(output)
 	}
 
