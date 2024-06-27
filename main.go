@@ -42,7 +42,7 @@ func walk(root string) map[string]int64 {
 			var dirSize int64
 			err := filepath.Walk(path, func(subPath string, subInfo os.FileInfo, subErr error) error {
 				if subErr != nil {
-					fmt.Printf("Оибка доступа  %q: %v\n", subPath, subErr)
+					fmt.Printf("Ошибка доступа  %q: %v\n", subPath, subErr)
 					return subErr
 				}
 				dirSize += subInfo.Size()
@@ -134,12 +134,12 @@ func main() {
 	for _, fileInfo := range fileInfos {
 		var sizeStr string
 		switch {
-		case fileInfo.Size >= 1024*1024*1024:
-			sizeStr = fmt.Sprintf("%.2f GB", float64(fileInfo.Size)/(1024*1024*1024))
-		case fileInfo.Size >= 1024*1024:
-			sizeStr = fmt.Sprintf("%.2f MB", float64(fileInfo.Size)/(1024*1024))
-		case fileInfo.Size >= 1024:
-			sizeStr = fmt.Sprintf("%.2f KB", float64(fileInfo.Size)/1024)
+		case fileInfo.Size >= 1000*1000*1000:
+			sizeStr = fmt.Sprintf("%.2f GB", float64(fileInfo.Size)/(1000*1000*1000))
+		case fileInfo.Size >= 1000*1000:
+			sizeStr = fmt.Sprintf("%.2f MB", float64(fileInfo.Size)/(1000*1000))
+		case fileInfo.Size >= 1000:
+			sizeStr = fmt.Sprintf("%.2f KB", float64(fileInfo.Size)/1000)
 		default:
 			sizeStr = fmt.Sprintf("%d bytes", fileInfo.Size)
 		}
