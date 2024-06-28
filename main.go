@@ -23,21 +23,21 @@ type FileInfo struct {
 	Size int64
 }
 
-//Функция принимает срез файлов для сортировки от меньшего к большему.
+//*sortBySizeAsc - принимает срез файлов для сортировки от меньшего к большему.
 func sortBySizeAsc(files []FileInfo) {
 	sort.Slice(files, func(i, j int) bool {
 		return files[i].Size < files[j].Size
 	})
 }
 
-//Функция принимает срез файлов и элементы сортируются в порядке убывания размера.
+//*sortBySizeDesc - принимает срез файлов и элементы сортируются в порядке убывания размера.
 func sortBySizeDesc(files []FileInfo) {
 	sort.Slice(files, func(i, j int) bool {
 		return files[i].Size > files[j].Size
 	})
 }
 
-//Функция принимает строку root которая содержит информацию о размере каждой директории, начиная с корневой директории root.
+//*walk - принимает строку root которая содержит информацию о размере каждой директории, начиная с корневой директории root.
 func walk(root string) (map[string]int64, error) {
 
 	//Создается пустая карта, которая будет содержать путь к директории и ее размер.
@@ -86,7 +86,7 @@ func walk(root string) (map[string]int64, error) {
 		return nil, walkErr
 	}
 
-	//Функция озвращает карту directorySizes, содержащую информацию о размере каждой директории и ошибку.
+	//*walk - озвращает карту directorySizes, содержащую информацию о размере каждой директории и ошибку.
 	return directorySizes, nil
 }
 
@@ -98,7 +98,7 @@ func main() {
 	rootPtr := flag.String("root", "", "Укажите корневую папку")
 	sortPtr := flag.String("sort", "", "Укажите порядок сортировки (asc или desc)")
 
-	//Функция для помощи с вводом флагов
+	//*flag.Usage - для помощи с вводом флагов
 	flag.Usage = func() {
 		fmt.Println("  --root string\tУкажите корневую папку\"")
 		fmt.Println("  --sort string\tУкажите порядок сортировки (asc или desc)")
