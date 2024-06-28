@@ -7,7 +7,13 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 )
+
+const thousand float64 = 1000
+const GB int64 = 1000 * 1000 * 1000
+const MB int64 = 1000 * 1000
+const KB int64 = 1000
 
 // Структура для хранения информации о файлах
 
@@ -18,11 +24,8 @@ type FileInfo struct {
 }
 
 /*
-sortBySizeAsc принимает слайс файлов files типа []FileInfo. Внутри функции используется функция sort.Slice,
-которая принимает слайс и функцию сравнения для сортировки элементов слайса.
-Функция сравнения задается анонимной функцией, которая сравнивает размеры файлов files[i].Size и files[j].Size.
-Если размер файла i меньше размера файла j,
-то возвращается true, что указывает на то, что элементы должны быть поменяны местами.
+sortBySizeAsc принимает срез файлов. Внутри используется функция sort.Slice,
+которая принимает срез и функцию сравнения для сортировки элементов среза.
 */
 
 func sortBySizeAsc(files []FileInfo) {
@@ -33,9 +36,6 @@ func sortBySizeAsc(files []FileInfo) {
 
 /*
 Функция sortBySizeDesc имеет аналогичную структуру, но в этой функции элементы сортируются в порядке убывания размера.
-То есть, если размер файла i больше размера файла j, то возвращается true, чтобы элементы были поменяны местами.
-Обе функции изменяют исходный слайс files, поэтому после вызова одной из этих функций слайс будет отсортирован в соответствии
-с заданным порядком размеров файлов.
 */
 
 func sortBySizeDesc(files []FileInfo) {
@@ -46,36 +46,19 @@ func sortBySizeDesc(files []FileInfo) {
 
 /*Функция walk принимает строку root в качестве аргумента и возвращает карту map[string]int64,
 которая содержит информацию о размере каждой директории, начиная с корневой директории root.*/
-
-/*Как работает walk
-Сначала в функции создается пустая карта directorySizes, которая будет содержать путь к директории и ее размер.
-Затем создаются две переменные: mu типа sync.Mutex для синхронизации доступа к общим данным и wg типа sync.WaitGroup
-для ожидания завершения всех горутин.
-
-Функция filepath.Walk используется для рекурсивного прохода по директориям, начиная с корневой директории root.
-Внутри этой функции передается анонимная функция, которая будет вызываться для каждого элемента в директории.
-Если происходит ошибка доступа к файлу или директории, она обрабатывается и выводится сообщение об ошибке.
-Если текущий элемент является директорией, то увеличивается счетчик wg и запускается новая горутина с анонимной функцией.
-В этой функции происходит рекурсивный проход по всем элементам внутри директории и вычисление общего размера.
-После завершения прохода по директории считанный размер сохраняется в карте directorySizes.
-
-Для безопасности доступа к общим данным используется методы Lock и Unlock мьютекса mu.
-Если происходит ошибка при вычислении размера директории, выводится соответствующее сообщение.
-По завершении прохода по всем директориям ожидается завершение всех горутин с помощью метода Wait у WaitGroup.
-В конце функция возвращает карту directorySizes, содержащую информацию о размере каждой директории.
-*/
-
-func walk(root string) map[string]int64 {
-	directorySizes := make(map[string]int64)
+func walk(root string) (map[string]int64, error) {
+	directorySizes := make(map[string]int64) // создается пустая карта directorySizes, которая будет содержать путь к директории и ее размер.
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	//используется для рекурсивного прохода по директориям, начиная с корневой директории root.
+	walkErr := filepath.Walk(root, func(path string, info os.FileInfo, err error) error { //
 		if err != nil {
 			fmt.Printf("Ошибка доступа %q: %v\n", path, err)
 			return err
-		}
+		} //принимает путь к директории, функцию обратного вызова и возвращает ошибку, если что-то пошло не так.
 
+		//Проверка, если папка, то запускается горутина
 		if info.IsDir() {
 			fmt.Printf("Проход директории: %s\n", path)
 			wg.Add(1)
@@ -95,23 +78,24 @@ func walk(root string) map[string]int64 {
 				}
 				mu.Lock()
 				directorySizes[dirPath] = dirSize
-				mu.Unlock()
+				mu.Unlock() //Для безопасности доступа к общей переменной используется Lock и Unlock.
 			}(path)
 		}
 
 		return nil
 	})
 
-	if err != nil {
-		fmt.Printf("Ошибка прохода %q: %v\n", root, err)
+	if walkErr != nil {
+		return nil, walkErr
 	}
 
 	wg.Wait()
 
-	return directorySizes
+	return directorySizes, walkErr //возвращает карту directorySizes, содержащую информацию о размере каждой директории.
 }
 
 func main() {
+	start := time.Now()
 	// Определение и парсинг флагов
 	rootPtr := flag.String("root", "", "Укажите корневую папку")
 	sortPtr := flag.String("sort", "asc", "Укажите порядок сортировки (asc или desc)")
@@ -139,7 +123,6 @@ func main() {
 	/*
 		происходит получение списка файлов в указанной директории, используя filepath.Glob.
 		Эта функция возвращает список файлов в указанной директории, соответствующих шаблону * (все файлы).
-		Если происходит ошибка при получении списка файлов, выводится сообщение об ошибке и программа завершается.
 	*/
 	files, err := filepath.Glob(filepath.Join(*rootPtr, "*"))
 	if err != nil {
@@ -147,37 +130,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileInfos := make([]FileInfo, 0)
-	directories := walk(*rootPtr)
+	File_Info := make([]FileInfo, 0)
+	directories, walkErr := walk(*rootPtr)
+	if walkErr != nil {
+		fmt.Println("Ошибка при обходе файловой системы:", walkErr)
+		os.Exit(1)
+	}
 
 	/*
 		Вызывается функция walk, которая рекурсивно обходит все поддиректории начиная с указанной корневой директории
 		и возвращает карту, где ключами являются пути к директориям, а значениями - их размеры.
 	*/
 
-	//--------------------------------------------------------------------------------------------------------------
-
 	// Чтение информации о файлах
-	/*
-		происходит чтение информации о каждом файле из списка файлов:
-		    Для каждого файла вызывается os.Stat, чтобы получить информацию о файле (размер, тип и имя).
-		    Если происходит ошибка при чтении информации о файле, выводится сообщение об ошибке и программа переходит к следующему файлу.
-		    Определяется тип файла (файл или директория) и размер файла.
-		    Если файл является директорией, то размер файла устанавливается равным размеру соответствующей директории
-		    из карты directories, возвращенной функцией walk.
-		    Информация о файле (имя, тип, размер) добавляется в срез fileInfos в виде структуры FileInfo.
-
-		После завершения цикла чтения информации о файлах, срез fileInfos содержит информацию о всех файлах и директориях
-		в указанной директории, включая их имена, типы (файл или директория) и размеры.
-	*/
 	for _, file := range files {
-		fileInfo, err := os.Stat(file)
+		fileInfo, err := os.Stat(file) //Для каждого файла вызывается os.Stat, чтобы получить информацию о файле (размер, тип и имя).
 		if err != nil {
 			fmt.Println("Ошибка чтения информации о файле:", err)
 			continue
 		}
 
-		fileType := "file"
+		fileType := "file" //Определяется тип файла (файл или директория) и размер файла.
 		if fileInfo.IsDir() {
 			fileType = "directory"
 		}
@@ -189,30 +162,31 @@ func main() {
 			fileSize = fileInfo.Size()
 		}
 
-		fileInfos = append(fileInfos, FileInfo{
+		File_Info = append(File_Info, FileInfo{
 			Name: filepath.Base(file),
 			Type: fileType,
 			Size: fileSize,
-		})
+		}) /*срез filesInfo содержит информацию о всех файлах и директориях
+		в указанной директории, включая их имена, типы (файл или директория) и размеры.*/
 	}
 
 	// Сортировка файлов
 	if *sortPtr == "asc" {
-		sortBySizeAsc(fileInfos)
+		sortBySizeAsc(File_Info)
 	} else if *sortPtr == "desc" {
-		sortBySizeDesc(fileInfos)
+		sortBySizeDesc(File_Info)
 	}
 
 	// Вывод информации о файлах
-	for _, fileInfo := range fileInfos {
+	for _, fileInfo := range File_Info {
 		var sizeStr string
 		switch {
-		case fileInfo.Size >= 1000*1000*1000:
-			sizeStr = fmt.Sprintf("%.2f GB", float64(fileInfo.Size)/(1000*1000*1000))
-		case fileInfo.Size >= 1000*1000:
-			sizeStr = fmt.Sprintf("%.2f MB", float64(fileInfo.Size)/(1000*1000))
-		case fileInfo.Size >= 1000:
-			sizeStr = fmt.Sprintf("%.2f KB", float64(fileInfo.Size)/1000)
+		case fileInfo.Size >= GB:
+			sizeStr = fmt.Sprintf("%.2f GB", float64(fileInfo.Size)/(thousand*thousand*thousand))
+		case fileInfo.Size >= MB:
+			sizeStr = fmt.Sprintf("%.2f MB", float64(fileInfo.Size)/(thousand*thousand))
+		case fileInfo.Size >= KB:
+			sizeStr = fmt.Sprintf("%.2f KB", float64(fileInfo.Size)/thousand)
 		default:
 			sizeStr = fmt.Sprintf("%d bytes", fileInfo.Size)
 		}
@@ -220,5 +194,7 @@ func main() {
 		output := fmt.Sprintf("Name: %s, Type: %s, Size: %s", fileInfo.Name, fileInfo.Type, sizeStr)
 		fmt.Println(output)
 	}
+	elapsed := time.Since(start) //остановка счётчика и вывод
+	fmt.Printf("Время выполнения программы: %s\n", elapsed)
 
 }
