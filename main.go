@@ -80,15 +80,14 @@ func walk(root string) (map[string]int64, error) {
 
 		return nil
 	})
+	wg.Wait()
 
 	if walkErr != nil {
 		return nil, walkErr
 	}
 
-	wg.Wait()
-
 	//Функция озвращает карту directorySizes, содержащую информацию о размере каждой директории и ошибку.
-	return directorySizes, walkErr
+	return directorySizes, nil
 }
 
 func main() {
@@ -97,7 +96,7 @@ func main() {
 
 	// Определение и парсинг флагов
 	rootPtr := flag.String("root", "", "Укажите корневую папку")
-	sortPtr := flag.String("sort", "asc", "Укажите порядок сортировки (asc или desc)")
+	sortPtr := flag.String("sort", "", "Укажите порядок сортировки (asc или desc)")
 
 	//Функция для помощи с вводом флагов
 	flag.Usage = func() {
@@ -113,7 +112,7 @@ func main() {
 	}
 
 	//Проверка правильности ввода флагов
-	if *sortPtr != "asc" && *sortPtr != "desc" {
+	if *sortPtr != "asc" && *sortPtr != "desc" && *sortPtr != "" {
 		fmt.Println("Ошибка: неверный порядок сортировки. Укажите asc или desc для флага --sort.")
 		flag.Usage()
 		os.Exit(1)
@@ -167,7 +166,11 @@ func main() {
 	}
 
 	//Сортировка файлов
-	if *sortPtr == "asc" {
+	if *sortPtr == "" {
+		sortBySizeAsc(File_Info)
+		fmt.Println("Способ сортировки не был выбран - выполняется сортировка по умолчанию (asc)")
+
+	} else if *sortPtr == "asc" {
 		sortBySizeAsc(File_Info)
 	} else if *sortPtr == "desc" {
 		sortBySizeDesc(File_Info)
